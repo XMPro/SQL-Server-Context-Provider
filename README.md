@@ -1,7 +1,7 @@
 # SQL-Server-Context-Provider
 
 ## Prerequisites
-- SQL Server 2010
+- SQL Server 2012
 - Visual Studio (any version that supports .Net Core 2.1)
 - [XMPro IoT Framework NuGet package](https://www.nuget.org/packages/XMPro.IOT.Framework/3.0.2-beta)
 - Please see the [Building an Agent for XMPro IoT](https://docs.xmpro.com/lessons/writing-an-agent-for-xmpro-iot/) guide for a better understanding of how the XMPro IoT Framework works
