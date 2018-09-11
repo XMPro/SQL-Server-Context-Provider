@@ -10,7 +10,7 @@
 The *SQL Server Context Provider* allows the user to add context to a stream by bringing in reference/static data from a configured SQL data source. This agent is usually used in conjunction with the *Join Transformation*, which allows two data sources to be joined together to form a new data source for the stream.
 
 ## How the code works
-All settings referred to in the code need to correspond with the settings defined in the template that has been created for the agent using the Stream Integration Manager. Refer to the [Stream Integration Manager](https://docs.xmpro.com/topic/getting-to-know-the-framework/#1534129009509-379bd7d3-9f40) guide for instructions on how to define the settings in the template and package the agent after building the code. 
+All settings referred to in the code need to correspond with the settings defined in the template that has been created for the agent using the Stream Integration Manager. Refer to the [Stream Integration Manager](https://docs.xmpro.com/courses/packaging-an-agent-using-stream-integration-manager/) guide for instructions on how to define the settings in the template and package the agent after building the code. 
 
 After packaging the agent, you can upload it to XMPro IoT and start using it.
 
