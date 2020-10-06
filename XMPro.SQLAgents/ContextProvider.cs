@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -40,6 +40,7 @@ namespace XMPro.SQLAgents
         private string SQLDatabase => this.config["SQLDatabase"];
         private string SQLTable => this.config["SQLTable"];
 		private string SQLColumns => this.config["SQLColumns"];
+        private string LimitRowsBy => (!this.config.Parameters.ContainsKey("LimitRowsBy") && MaxRows > 0 ? "Count" : this.config["LimitRowsBy"]);
 		private int MaxRows
 		{
 			get
@@ -48,7 +49,10 @@ namespace XMPro.SQLAgents
 				return rows;
 			}
 		}
-		private string Filters => config["Filters"];
+        private string DurationType => this.config["DurationType"];
+        private int DurationValue => Int32.TryParse(config["DurationValue"] ?? "0", out int value) ? value : -1;
+        private string TimestampColumn => this.config["TimestampColumn"];
+        private string Filters => config["Filters"];
 
 		private string decrypt(string value)
         {
@@ -126,7 +130,41 @@ namespace XMPro.SQLAgents
 						SQLColumns.Value = String.Join(",", SQLColumns.Value.Split(',').Where(c => columns.Any(col => c == col.ColumnName)));
 					}
 
-					XMIoT.Framework.Settings.Filter Filters = settings.Find("Filters") as XMIoT.Framework.Settings.Filter;
+                    DropDown LimitRowsBy = settings.Find("LimitRowsBy") as DropDown;
+                    NumberBox MaxRows = settings.Find("MaxRows") as NumberBox;
+                    DropDown DurationType = settings.Find("DurationType") as DropDown;
+                    NumberBox DurationValue = settings.Find("DurationValue") as NumberBox;
+                    DropDown TimestampColumn = settings.Find("TimestampColumn") as DropDown;
+                    TimestampColumn.Options = new List<Option>();
+
+                    if (!parameters.ContainsKey("LimitRowsBy") && MaxRows.Value > 0)
+                        LimitRowsBy.Value = "Count";
+
+                    if (LimitRowsBy.Value == "Count")
+					{
+                        MaxRows.Visible = true;
+                        DurationType.Visible = false;
+                        DurationValue.Visible = false;
+                        TimestampColumn.Visible = false;
+                    }
+                    else if (LimitRowsBy.Value == "Duration")
+					{
+                        MaxRows.Visible = false;
+                        DurationType.Visible = true;
+                        DurationValue.Visible = true;
+                        TimestampColumn.Visible = true;
+                        TimestampColumn.Options = columns.Where(c => c.DataType.GetIoTType() == XMIoT.Framework.Settings.Enums.Types.DateTime)
+                            .Select(c => new Option() { DisplayMemeber = c.ColumnName, ValueMemeber = c.ColumnName }).ToList();
+                    }
+                    else
+					{
+                        MaxRows.Visible = false;
+                        DurationType.Visible = false;
+                        DurationValue.Visible = false;
+                        TimestampColumn.Visible = false;
+                    }
+
+                    XMIoT.Framework.Settings.Filter Filters = settings.Find("Filters") as XMIoT.Framework.Settings.Filter;
 					Filters.Fields = columns.Select(i => new TypedOption() { Type = i.DataType.GetIoTType(), DisplayMemeber = i.ColumnName, ValueMemeber = i.ColumnName }).ToList();
 
 					Grid SortGrid = settings.Find("SortGrid") as Grid;
@@ -204,7 +242,16 @@ namespace XMPro.SQLAgents
 					WhereClause = "WHERE " + WhereClause;
 			}
 
-			TopClause = MaxRows > 0 ? "TOP " + MaxRows : "";
+            if (LimitRowsBy == "Duration" && !String.IsNullOrEmpty(TimestampColumn) && DurationValue >= 0)
+			{
+                var durationClause = SQLHelpers.AddColumnQuotes(TimestampColumn) + " >= " + "DATEADD(" + DurationType + "," + (-1 * DurationValue) + ",GETDATE())";
+                if (string.IsNullOrWhiteSpace(WhereClause))
+                    WhereClause = "WHERE " + durationClause;
+                else
+                    WhereClause += " AND " + durationClause;
+            }
+
+			TopClause = LimitRowsBy == "Count" && MaxRows > 0 ? "TOP " + MaxRows : "";
 		}
 
         public void Poll()
@@ -268,7 +315,22 @@ namespace XMPro.SQLAgents
             if (String.IsNullOrWhiteSpace(this.SQLTable))
                 errors.Add($"Error {i++}: Table is not specified.");
 
-			if (errors.Any() == false)
+            if (LimitRowsBy == "Count" && MaxRows <= 0)
+                errors.Add($"Error {i++}: Number of Rows must be greater than 0.");
+
+            if (LimitRowsBy == "Duration")
+            {
+                if (String.IsNullOrEmpty(DurationType))
+                    errors.Add($"Error {i++}: Duration Type is not specified.");
+
+                if (DurationValue < 0)
+                    errors.Add($"Error {i++}: Duration Value must be greater than or equal to 0.");
+
+                if (String.IsNullOrEmpty(TimestampColumn))
+                    errors.Add($"Error {i++}: Timestamp Column is not specified.");
+            }
+
+            if (errors.Any() == false)
 			{
 				var server = new TextBox() { Value = this.SQLServer };
 				var errorMessage = "";
