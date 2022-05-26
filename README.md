@@ -1,4 +1,4 @@
-# SQL-Server-Context-Provider
+# SQL Server Context Provider
 
 ## Prerequisites
 - SQL Server 2012+
